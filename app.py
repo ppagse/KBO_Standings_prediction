@@ -71,7 +71,7 @@ def calculate_win_probability(team1_stats, team2_stats, model, scaler):
     return win_prob
 
 # 팀 간 경기 시뮬레이션
-def simulate_season(team_stats_df, model, scaler, num_games=144, num_simulations=50):
+def simulate_season(team_stats_df, model, scaler, num_games=144, num_simulations=10):
     teams = team_stats_df.index
     total_results = {team: {'wins': 0, 'losses': 0} for team in teams}
 
@@ -109,7 +109,7 @@ def simulate_season(team_stats_df, model, scaler, num_games=144, num_simulations
 st.set_page_config(page_title='KBO리그 시뮬레이션')
 
 # 페이지 설정
-pages = ["홈", "선수 성적 일람", "팀 편집", "예상 순위"]
+pages = ["홈", "시뮬레이션 과정", "선수 성적 일람", "팀 편집", "예상 순위"]
 page = st.sidebar.selectbox("페이지 선택", pages)
 
 if page == "홈":
@@ -141,6 +141,305 @@ if page == "홈":
     4. 예상 순위 페이지에서 시뮬레이션 결과를 확인하세요.
     """)
 
+# 시뮬레이션 과정 페이지
+elif page == "시뮬레이션 과정":
+    st.title("시뮬레이션 과정")
+    st.write("""
+    이 앱은 KBO 리그의 팀 성적을 예측하기 위해 머신러닝 모델을 사용합니다. 
+    다음은 모델을 학습시키고 리그 시뮬레이션을 수행하는 과정입니다.
+    """)
+
+    st.write("### 1. 데이터 수집 및 전처리")
+    st.write("먼저, MLB API를 사용하여 팀 정보와 일정 데이터를 수집합니다.")
+    st.code("""
+import requests
+import pandas as pd
+from datetime import datetime, timedelta
+
+# API 기본 URL
+BASE_URL = "https://statsapi.mlb.com/api/v1/"
+
+def get_teams():
+    url = BASE_URL + "teams?sportId=1"
+    response = requests.get(url)
+    teams = response.json()['teams']
+    team_dict = {team['id']: team['name'] for team in teams}
+    return team_dict
+
+def get_schedule(start_date, end_date):
+    url = BASE_URL + f"schedule?startDate={start_date}&endDate={end_date}&sportId=1"
+    response = requests.get(url)
+    games = response.json()['dates']
+    game_list = []
+    for date in games:
+        for game in date['games']:
+            game_list.append({
+                'gamePk': game['gamePk'],
+                'gameDate': game['gameDate'],
+                'homeTeam': game['teams']['home']['team']['name'],
+                'awayTeam': game['teams']['away']['team']['name']
+            })
+    return game_list
+    """, language="python")
+
+    st.write("이제 각 경기의 데이터를 수집하고, 이를 전처리하여 주요 지표를 추출합니다.")
+    st.code("""
+def get_game_data(gamePk):
+    url = BASE_URL + f"game/{gamePk}/boxscore"
+    response = requests.get(url)
+    game_data = response.json()
+    return game_data
+
+def process_game_data(game_data):
+    gamePk = game_data.get('gamePk', 'N/A')
+    gameDate = game_data.get('gameDate', 'N/A')
+
+    teams = game_data.get('teams', {})
+    home_team_data = teams.get('home', {})
+    away_team_data = teams.get('away', {})
+
+    home_team = home_team_data.get('team', {}).get('name', 'N/A')
+    away_team = away_team_data.get('team', {}).get('name', 'N/A')
+
+    home_stats = home_team_data.get('teamStats', {}).get('batting', {})
+    away_stats = away_team_data.get('teamStats', {}).get('batting', {})
+
+    home_ops = home_stats.get('ops', 0)
+    home_slg = home_stats.get('slg', 0)
+    home_obp = home_stats.get('obp', 0)
+
+    home_pitching = home_team_data.get('teamStats', {}).get('pitching', {})
+    home_era = home_pitching.get('era', 0)
+    home_whip = home_pitching.get('whip', 0)
+
+    away_ops = away_stats.get('ops', 0)
+    away_slg = away_stats.get('slg', 0)
+    away_obp = away_stats.get('obp', 0)
+
+    away_pitching = away_team_data.get('teamStats', {}).get('pitching', {})
+    away_era = away_pitching.get('era', 0)
+    away_whip = away_pitching.get('whip', 0)
+
+    home_runs = home_team_data.get('teamStats', {}).get('batting', {}).get('runs', 0)
+    away_runs = away_team_data.get('teamStats', {}).get('batting', {}).get('runs', 0)
+    home_wins = 1 if home_runs > away_runs else 0
+
+    return {
+        'gamePk': gamePk,
+        'gameDate': gameDate,
+        'homeTeam': home_team,
+        'awayTeam': away_team,
+        'home_ops': home_ops,
+        'home_slg': home_slg,
+        'home_obp': home_obp,
+        'home_era': home_era,
+        'home_whip': home_whip,
+        'away_ops': away_ops,
+        'away_slg': away_slg,
+        'away_obp': away_obp,
+        'away_era': away_era,
+        'away_whip': away_whip,
+        'home_wins': home_wins
+    }
+
+start_date = "2023-04-01"
+end_date = "2023-10-01"
+schedule = get_schedule(start_date, end_date)
+team_dict = get_teams()
+sample_games = schedule[:5]
+game_data_list = []
+
+for game in sample_games:
+    game_data = get_game_data(game['gamePk'])
+    game_data_list.append(game_data)
+
+processed_game_data_list = [process_game_data(game_data) for game_data in game_data_list]
+df_processed_games = pd.DataFrame(processed_game_data_list)
+print(df_processed_games.head())
+    """, language="python")
+
+    st.write("### 2. 모델 학습")
+    st.write("수집한 데이터를 바탕으로 랜덤 포레스트 모델을 학습시킵니다.")
+    st.code("""
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score
+import pickle
+
+# 특징 및 타겟 변수 생성
+X = df_processed_games[['home_ops', 'home_slg', 'home_obp', 'home_era', 'home_whip',
+                        'away_ops', 'away_slg', 'away_obp', 'away_era', 'away_whip']]
+y = df_processed_games['home_wins']
+
+# 데이터 분할
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# 데이터 스케일링
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# 랜덤 포레스트 모델 학습
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train_scaled, y_train)
+
+# 예측 및 평가
+y_pred = model.predict(X_test_scaled)
+accuracy = accuracy_score(y_test, y_pred)
+print(f'Accuracy: {accuracy}')
+
+# 모델과 스케일러 저장
+with open('rf_model.pkl', 'wb') as f:
+    pickle.dump(model, f)
+
+with open('scaler.pkl', 'wb') as f:
+    pickle.dump(scaler, f)
+    """, language="python")
+
+    st.write("### 랜덤 포레스트 모델이란?")
+    st.write("""
+    랜덤 포레스트(Random Forest)는 앙상블 학습 방법 중 하나로, 다수의 결정 트리(decision tree)를 학습하고 예측을 합치는 방식으로 동작합니다.
+    
+    주요 특징:
+    - 여러 개의 결정 트리를 학습하여 예측 성능을 향상시킵니다.
+    - 개별 트리의 예측을 종합하여 최종 예측을 도출합니다.
+    - 과적합(overfitting)을 방지하는 데 효과적입니다.
+    
+    랜덤 포레스트는 각 트리가 학습할 때 사용하는 데이터 샘플을 무작위로 선택하고, 트리의 노드에서 분할할 특징을 무작위로 선택합니다. 
+    이를 통해 다수의 약한 학습기를 결합하여 강력한 학습기를 만드는 원리를 사용합니다.
+    """)
+
+    st.write("### 3. 리그 시뮬레이션")
+    st.write("학습된 모델을 사용하여 리그 시뮬레이션을 실행합니다.")
+    st.code("""
+def calculate_win_probability(team1_stats, team2_stats, model, scaler):
+    combined_stats = list(team1_stats) + list(team2_stats)
+    combined_stats_scaled = scaler.transform([combined_stats])
+    win_prob = model.predict_proba(combined_stats_scaled)[0][1]
+    return win_prob
+
+def simulate_season(team_stats_df, model, scaler, num_games=144, num_simulations=50):
+    teams = team_stats_df.index
+    total_results = {team: {'wins': 0, 'losses': 0} for team in teams}
+
+    for _ in range(num_simulations):
+        results = {team: {'wins': 0, 'losses': 0} for team in teams}
+        for i, team1 in enumerate(teams):
+            for j, team2 in enumerate(teams):
+                if i >= j:
+                    continue
+                team1_wins = 0
+                team2_wins = 0
+                for _ in range(num_games // (len(teams) - 1)):
+                    win_prob = calculate_win_probability(team_stats_df.loc[team1], team_stats_df.loc[team2], model, scaler)
+                    if random.random() < win_prob:
+                        team1_wins += 1
+                    else:
+                        team2_wins += 1
+                results[team1]['wins'] += team1_wins
+                results[team1]['                losses'] += team2_wins
+                results[team2]['wins'] += team2_wins
+                results[team2]['losses'] += team1_wins
+        for team in teams:
+            total_results[team]['wins'] += results[team]['wins']
+            total_results[team]['losses'] += results[team]['losses']
+
+    # 평균값 계산
+    for team in teams:
+        total_results[team]['wins'] /= num_simulations
+        total_results[team]['losses'] /= num_simulations
+
+    return total_results
+
+# 팀 평균 지표 계산 함수
+def calculate_weighted_averages(data, is_pitcher=False):
+    data = data.copy()
+    if is_pitcher:
+        data['Weight'] = data['IP'].astype(float)
+    else:
+        data['Weight'] = data['G'].astype(float)
+
+    weighted_avg = {}
+    for col in ['OPS', 'SLG', 'OBP', 'ERA', 'WHIP']:
+        if col in data.columns:
+            data[col] = data[col].replace('', 0).astype(float)
+            weighted_avg[col] = (data[col] * data['Weight']).sum() / data['Weight'].sum()
+
+    return pd.Series(weighted_avg)
+
+# KBO 데이터 로드
+file_path = 'data/player_data_2013~2023.csv'
+kbo_player_data = pd.read_csv(file_path)
+
+# 각 팀의 선수 데이터를 이용해 평균 지표 계산
+teams = ['LG', 'KT', 'SSG', 'NC', '두산', 'KIA', '롯데', '한화', '삼성', '키움']
+team_stats = {}
+
+for team in teams:
+    team_players = []
+    for pos, player_list in st.session_state.lineup_state[team].items():
+        for player in player_list:
+            player_name, player_year = player
+            player_stats = kbo_player_data[(kbo_player_data['Player'] == player_name) & (kbo_player_data['Year'] == int(player_year))]
+            if not player_stats.empty:
+                team_players.append(player_stats)
+    if team_players:
+        team_data = pd.concat(team_players, ignore_index=True)
+        hitters = team_data[team_data['OPS'].notna()]
+        pitchers = team_data[team_data['ERA'].notna()]
+
+        if not hitters.empty:
+            hitters_avg = calculate_weighted_averages(hitters, is_pitcher=False)
+        else:
+            hitters_avg = pd.Series({'OPS': 0, 'SLG': 0, 'OBP': 0})
+
+        if not pitchers.empty:
+            pitchers_avg = calculate_weighted_averages(pitchers, is_pitcher=True)
+        else:
+            pitchers_avg = pd.Series({'ERA': 0, 'WHIP': 0})
+
+        team_avg = pd.concat([hitters_avg, pitchers_avg])
+        team_stats[team] = team_avg
+
+team_stats_df = pd.DataFrame(team_stats).T
+team_stats_df = team_stats_df.loc[:, (team_stats_df != 0).any(axis=0)]
+
+# 모델과 스케일러 로드
+with open('data/rf_model.pkl', 'rb') as f:
+    model = pickle.load(f)
+
+with open('data/scaler.pkl', 'rb') as f:
+    scaler = pickle.load(f)
+
+# 시즌 시뮬레이션 실행
+results = simulate_season(team_stats_df, model, scaler)
+
+# 결과 출력 및 정렬
+results_df = pd.DataFrame(results).T
+results_df = results_df.sort_values(by='wins', ascending=False)
+results_df['rank'] = range(1, len(results_df) + 1)
+
+# 순위표 출력
+st.write(results_df)
+
+# 팀 평균 지표 출력
+st.write("팀 평균 지표")
+st.dataframe(team_stats_df)
+
+# 시각화
+fig, ax = plt.subplots(figsize=(12, 8))
+ax.bar(results_df.index, results_df['wins'], color='b', alpha=0.7, label='Wins')
+ax.bar(results_df.index, results_df['losses'], bottom=results_df['wins'], color='r', alpha=0.7, label='Losses')
+ax.set_xlabel('Teams')
+ax.set_ylabel('Number of Games')
+ax.set_title('Simulated KBO Season Results')
+ax.legend()
+plt.xticks(rotation=45)
+st.pyplot(fig)
+    """, language="python")
+
+
 elif page == "선수 성적 일람":
     st.title("선수 성적 일람")
     
@@ -148,19 +447,38 @@ elif page == "선수 성적 일람":
     file_path = 'data/player_data_2013~2023.csv'
     player_data = pd.read_csv(file_path)
     
-    st.dataframe(player_data)
+    # Player 값이 "Player"인 행 삭제
+    player_data = player_data[player_data['Player'] != 'Player']
+    
+    # 지표들을 숫자로 변환
+    for col in ['OPS', 'SLG', 'OBP', 'ERA', 'WHIP', 'G', 'IP']:
+        if col in player_data.columns:
+            player_data[col] = pd.to_numeric(player_data[col], errors='coerce')
+    
+    # 타자와 투수 분리
+    hitters = player_data.dropna(subset=['OPS', 'SLG', 'OBP'])
+    pitchers = player_data.dropna(subset=['ERA', 'WHIP'])
 
-    # 선수 성적 요약 정보 제공
-    summary = player_data.describe()
-    st.write("선수 성적 요약")
-    st.dataframe(summary)
+    # 타자 지표 표시
+    st.header("타자 성적 일람")
+    st.dataframe(hitters[['Player', 'Year', 'Team', 'G', 'OPS', 'SLG', 'OBP']], width=1200)
+
+    # 투수 지표 표시
+    st.header("투수 성적 일람")
+    st.dataframe(pitchers[['Player', 'Year', 'Team', 'IP', 'ERA', 'WHIP']], width=1200)
 
     # 각 팀별 성적 요약
-    teams = player_data['Team'].unique()
-    for team in teams:
-        st.write(f"팀: {team}")
-        team_data = player_data[player_data['Team'] == team]
-        st.dataframe(team_data)
+    teams = player_data['Team'].unique()[:-1]
+    st.header("팀별 선수 일람")
+    selected_team = st.selectbox("팀 선택", teams)
+    if selected_team:
+        team_hitters = hitters[hitters['Team'] == selected_team]
+        team_pitchers = pitchers[pitchers['Team'] == selected_team]
+        st.subheader(f"{selected_team} 타자 성적")
+        st.dataframe(team_hitters[['Player', 'Year', 'Team', 'G', 'OPS', 'SLG', 'OBP']], width=1200)
+        st.subheader(f"{selected_team} 투수 성적")
+        st.dataframe(team_pitchers[['Player', 'Year', 'Team', 'IP', 'ERA', 'WHIP']], width=1200)
+
 
 # 팀 라인업 편집 페이지
 elif page == "팀 편집":
@@ -169,6 +487,9 @@ elif page == "팀 편집":
     # 제공된 CSV 파일 경로
     file_path = 'data/player_data_2013~2023.csv'
     player_data = pd.read_csv(file_path)
+
+    # Player 값이 "Player"인 행 삭제
+    player_data = player_data[player_data['Player'] != 'Player']
     
     # 팀 목록
     teams = ['LG', 'KT', 'SSG', 'NC', '두산', 'KIA', '롯데', '한화', '삼성', '키움']
@@ -197,10 +518,23 @@ elif page == "팀 편집":
     team_lineup = st.session_state.lineup_state[selected_team]
     
     positions = ['sp', 'rp', 'c', 'fb', 'sb', 'tb', 'ss', 'lf', 'cf', 'rf', 'dh']
+    pos_name = {
+        'sp' : '선발 투수',
+        'rp' : '구원 투수',
+        'c' : '포수',
+        'fb' : '1루수',
+        'sb' : '2루수',
+        'tb' : '3루수',
+        'ss' : '유격수',
+        'lf' : '좌익수',
+        'cf' : '중견수',
+        'rf' : '우익수',
+        'dh' : '지명타자'
+    }
     
     # 포지션별 선수 입력 필드
     for pos in positions:
-        st.write(f"### {pos}")
+        st.write(f"### {pos_name[pos]}")
         available_players = player_data.dropna(subset=['OPS', 'SLG', 'OBP']) if pos not in ['sp', 'rp'] else player_data.dropna(subset=['ERA', 'WHIP'])
         for idx, player in enumerate(team_lineup[pos]):
             current_player = player[0] if player[0] in available_players['Player'].values else '선수 선택'
@@ -209,7 +543,7 @@ elif page == "팀 편집":
             
             col1, col2, col3 = st.columns([4, 2, 1])
             with col1:
-                selected_player = st.selectbox(f"{pos} 선수 {idx+1}", ['선수 선택'] + list(available_players['Player'].values), index=0 if current_player == '선수 선택' else available_players['Player'].values.tolist().index(current_player) + 1, key=f"{pos}_{idx}_player")
+                selected_player = st.selectbox(f"{pos_name[pos]} {idx+1}", ['선수 선택'] + list(available_players['Player'].values), index=0 if current_player == '선수 선택' else available_players['Player'].values.tolist().index(current_player) + 1, key=f"{pos}_{idx}_player")
                 if selected_player != team_lineup[pos][idx][0]:
                     team_lineup[pos][idx][0] = selected_player
                     # 선수 변경 시 연도 자동 업데이트
@@ -220,7 +554,7 @@ elif page == "팀 편집":
             with col2:
                 if selected_player != '선수 선택':
                     try:
-                        selected_year = st.selectbox(f"{pos} 연도 {idx+1}", years, index=0 if current_year == '연도 선택' else years.index(current_year), key=f"{pos}_{idx}_year")
+                        selected_year = st.selectbox(f"연도 {idx+1}", years, index=0 if current_year == '연도 선택' else years.index(current_year), key=f"{pos}_{idx}_year")
                     except ValueError:
                         selected_year = years[0]
                         team_lineup[pos][idx][1] = selected_year
@@ -232,7 +566,7 @@ elif page == "팀 편집":
                         st.experimental_rerun()
         
         # 새로운 선수 추가
-        if st.button(f"{pos} 새로운 선수 추가", key=f"add_{pos}"):
+        if st.button(f"선수 추가", key=f"add_{pos}"):
             team_lineup[pos].append(['선수 선택', '연도 선택'])
             st.experimental_rerun()
 

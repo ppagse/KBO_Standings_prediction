@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 import re
 import pickle
 import matplotlib.pyplot as plt
+from matplotlib import font_manager, rc
 import random
 import collections
 collections.Callable = collections.abc.Callable
@@ -12,8 +13,9 @@ from collections import defaultdict
 import warnings
 warnings.filterwarnings(action='ignore')
 
-
-plt.rc('font', family='NanumGothic')
+font_path = 'customFonts/NanumGothic-Regular.ttf'
+font_name = font_manager.FontProperties(fname=font_path).get_name()
+rc('font', family=font_name)
 
 # KBO 팀 데이터 가져오기
 def search_team(teamname, year):

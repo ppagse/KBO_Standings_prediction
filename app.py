@@ -118,7 +118,7 @@ def simulate_season(team_stats_df, model, scaler, num_games=144, num_simulations
 
 
 # Streamlit 앱 시작
-st.set_page_config(page_title='KBO리그 시뮬레이션')
+st.set_page_config(page_title='KBO리그 시뮬레이션', layout='wide')
 
 # 페이지 설정
 pages = ["홈", "데이터 수집 과정", "시뮬레이션 과정", "선수 성적 일람", "팀 편집", "예상 순위"]
@@ -126,32 +126,65 @@ page = st.sidebar.selectbox("페이지 선택", pages)
 
 if page == "홈":
     st.markdown("""
+    <style>
+    .card {
+        border: 1px solid #e1e1e1;
+        border-radius: 10px;
+        padding: 20px;
+        margin: 10px 0;
+        box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    .card h3 {
+        margin-bottom: 15px;
+    }
+    .card p {
+        margin-bottom: 10px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
     # KBO리그 시뮬레이션
     이 앱은 MLB 데이터와 KBO 데이터를 기반으로 팀 성적을 예측하는 시뮬레이션 앱입니다.
-
-    ## 사용된 주요 야구 지표
-    - **OPS (On-base Plus Slugging)**: 타자의 출루율과 장타율을 합한 값
-        - 수식: OPS = 출루율 (OBP) + 장타율 (SLG)
-    - **SLG (Slugging Percentage)**: 타자의 장타율
-        - 수식: SLG = (안타 (1B) + 2루타 (2B) * 2 + 3루타 (3B) * 3 + 홈런 (HR) * 4) / 타수 (AB)
-    - **OBP (On-base Percentage)**: 타자의 출루율
-        - 수식: OBP = (안타 (H) + 볼넷 (BB) + 사구 (HBP)) / (타수 (AB) + 볼넷 (BB) + 사구 (HBP) + 희생플라이 (SF))
-    - **ERA (Earned Run Average)**: 투수의 평균 자책점
-        - 수식: ERA = (자책점 (ER) * 9) / 이닝 (IP)
-    - **WHIP (Walks plus Hits per Inning Pitched)**: 이닝당 출루 허용률
-        - 수식: WHIP = (볼넷 (BB) + 피안타 (H)) / 이닝 (IP)
-
-    ## 기능 설명
-    1. **선수 성적 일람**: CSV 파일에 있는 선수들의 성적을 일람할 수 있습니다.
-    2. **팀 편집**: 각 팀의 라인업을 편집할 수 있습니다.
-    3. **예상 순위**: 편집한 팀 라인업을 기반으로 KBO리그의 예상 순위를 예측합니다.
-
-    ## 사용 방법
-    1. 사이드바에서 원하는 페이지를 선택하세요.
-    2. 선수 성적 일람 페이지에서 선수들의 성적을 확인하세요.
-    3. 팀 편집 페이지에서 각 팀의 라인업을 편집하세요.
-    4. 예상 순위 페이지에서 시뮬레이션 결과를 확인하세요.
     """)
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown("""
+        <div class="card">
+            <h3>선수 성적 일람</h3>
+            <p>CSV 파일에 있는 선수들의 성적을 일람할 수 있습니다.</p>
+            <ul>
+                <li>OPS, SLG, OBP, ERA, WHIP 지표 포함</li>
+                <li>타자와 투수 성적 분리</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div class="card">
+            <h3>팀 편집</h3>
+            <p>각 팀의 라인업을 편집할 수 있습니다.</p>
+            <ul>
+                <li>선수 추가 및 삭제</li>
+                <li>포지션별 선수 배치</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown("""
+        <div class="card">
+            <h3>예상 순위</h3>
+            <p>편집한 팀 라인업을 기반으로 KBO리그의 예상 순위를 예측합니다.</p>
+            <ul>
+                <li>시즌 시뮬레이션</li>
+                <li>팀별 승률 계산</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
 elif page == "데이터 수집 과정":
     st.title("데이터 수집 과정")

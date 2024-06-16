@@ -1,5 +1,5 @@
-streamlit
+streamlit==1.21.0
 pandas
-beautifulsoup4
-pickle
+beautifulsoup4==4.4.1
 matplotlib
+scikit-learn==1.2.2

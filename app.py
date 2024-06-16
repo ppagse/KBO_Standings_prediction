@@ -10,12 +10,23 @@ import random
 import collections
 collections.Callable = collections.abc.Callable
 from collections import defaultdict
+import os
+import matplotlib.font_manager as fm
 import warnings
 warnings.filterwarnings(action='ignore')
 
-font_path = 'customFonts/NanumGothic-Regular.ttf'
-font_name = font_manager.FontProperties(fname=font_path).get_name()
-rc('font', family=font_name)
+@st.cache_data
+def fontRegistered():
+    font_dirs = [os.getcwd() + '/customFonts']
+    font_files = fm.findSystemFonts(fontpaths=font_dirs)
+
+    for font_file in font_files:
+        fm.fontManager.addfont(font_file)
+    fm._load_fontmanager(try_read_cache=False)
+
+fontRegistered()
+
+plt.rc('font', family='NanumGothic')
 
 # KBO 팀 데이터 가져오기
 def search_team(teamname, year):

@@ -878,7 +878,9 @@ elif page == "팀 편집":
         
         # 새로운 선수 추가
         if st.button(f"선수 추가", key=f"add_{pos}"):
-            team_lineup[pos].append(['선수 선택', '연도 선택'])
+            default_player = '구자욱' if pos not in ['sp', 'rp'] else '김광현'
+            default_year = '2023'
+            team_lineup[pos].append([default_player, default_year])
             st.experimental_rerun()
 
     # 선수 이름이 "선수 선택"인 칸을 모두 삭제
@@ -887,6 +889,8 @@ elif page == "팀 편집":
     
     # 변경 사항 저장
     st.session_state.lineup_state[selected_team] = team_lineup
+
+
 
 elif page == "예상 순위":
     st.title("예상 순위표")

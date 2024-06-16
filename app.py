@@ -15,7 +15,6 @@ import matplotlib.font_manager as fm
 import warnings
 warnings.filterwarnings(action='ignore')
 
-@st.cache_data
 def fontRegistered():
     font_dirs = [os.getcwd() + '/customFonts']
     font_files = fm.findSystemFonts(fontpaths=font_dirs)

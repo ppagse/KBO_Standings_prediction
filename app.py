@@ -847,14 +847,18 @@ elif page == "팀 편집":
     for pos in positions:
         st.write(f"### {pos_name[pos]}")
         available_players = player_data.dropna(subset=['OPS', 'SLG', 'OBP']) if pos not in ['sp', 'rp'] else player_data.dropna(subset=['ERA', 'WHIP'])
+        
+        # 중복된 이름 제거
+        available_player_names = available_players['Player'].unique().tolist()
+        
         for idx, player in enumerate(team_lineup[pos]):
-            current_player = player[0] if player[0] in available_players['Player'].values else '선수 선택'
+            current_player = player[0] if player[0] in available_player_names else '선수 선택'
             years = sorted(player_data[player_data['Player'] == current_player]['Year'].unique(), reverse=True) if current_player != '선수 선택' else []
             current_year = player[1] if player[1] in years else (years[0] if years else '연도 선택')
             
             col1, col2, col3 = st.columns([4, 2, 1])
             with col1:
-                selected_player = st.selectbox(f"{pos_name[pos]} {idx+1}", ['선수 선택'] + list(available_players['Player'].values), index=0 if current_player == '선수 선택' else available_players['Player'].values.tolist().index(current_player) + 1, key=f"{pos}_{idx}_player")
+                selected_player = st.selectbox(f"{pos_name[pos]} {idx+1}", ['선수 선택'] + available_player_names, index=0 if current_player == '선수 선택' else available_player_names.index(current_player) + 1, key=f"{pos}_{idx}_player")
                 if selected_player != team_lineup[pos][idx][0]:
                     team_lineup[pos][idx][0] = selected_player
                     # 선수 변경 시 연도 자동 업데이트
@@ -889,6 +893,7 @@ elif page == "팀 편집":
     
     # 변경 사항 저장
     st.session_state.lineup_state[selected_team] = team_lineup
+
 
 
 
@@ -962,7 +967,7 @@ elif page == "예상 순위":
             scaler = pickle.load(f)
 
     # 시즌 시뮬레이션 실행
-    with st.spinner('시즌 시뮬레이션을 실행하고 있습니다...'):
+    with st.spinner('시즌 시뮬레이션을 실행하고 있습니다...(약 1분 소요)'):
         results = simulate_season(team_stats_df, model, scaler)
 
     # 결과 출력 및 정렬

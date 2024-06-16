@@ -573,15 +573,9 @@ elif page == "팀 편집":
     # 선수 이름이 "선수 선택"인 칸을 모두 삭제
     for pos in positions:
         team_lineup[pos] = [player for player in team_lineup[pos] if player[0] != '선수 선택']
-
-    st.write("편집된 팀 라인업")
-    st.write(dict(team_lineup))
     
     # 변경 사항 저장
     st.session_state.lineup_state[selected_team] = team_lineup
-    
-    # Save updated lineup to a JSON file or display as JSON string
-    st.json(dict(team_lineup))
 
 elif page == "예상 순위":
     st.title("예상 순위표")

@@ -275,7 +275,7 @@ elif page == "예상 순위":
                     st.session_state.lineup_state[team][pos] = [[player[0], player[1]] for player in players]
     
     # KBO 데이터 로드
-    file_path = 'data/player_data_2013~2023.csv'
+    file_path = '/mnt/data/player_data_2013~2023.csv'
     kbo_player_data = pd.read_csv(file_path)
 
     # 각 팀의 선수 데이터를 이용해 평균 지표 계산
@@ -328,13 +328,14 @@ elif page == "예상 순위":
     results_df['rank'] = range(1, len(results_df) + 1)
 
     # 순위표 출력
+    st.write("## 시뮬레이션 결과")
     st.write(results_df)
 
     # 팀 평균 지표 출력
-    st.write("팀 평균 지표")
+    st.write("## 팀 평균 지표")
     st.dataframe(team_stats_df)
 
-    # 시각화
+    # 승리와 패배를 막대 그래프로 시각화
     fig, ax = plt.subplots(figsize=(12, 8))
     ax.bar(results_df.index, results_df['wins'], color='b', alpha=0.7, label='Wins')
     ax.bar(results_df.index, results_df['losses'], bottom=results_df['wins'], color='r', alpha=0.7, label='Losses')
@@ -343,4 +344,45 @@ elif page == "예상 순위":
     ax.set_title('Simulated KBO Season Results')
     ax.legend()
     plt.xticks(rotation=45)
+    st.pyplot(fig)
+
+    # 각 팀별 OPS, SLG, OBP 평균을 히스토그램으로 시각화
+    st.write("### 팀별 OPS, SLG, OBP 평균")
+    fig, axs = plt.subplots(3, 1, figsize=(12, 18))
+
+    team_stats_df['OPS'].plot(kind='bar', ax=axs[0], color='blue', alpha=0.7)
+    axs[0].set_title('Team OPS')
+    axs[0].set_ylabel('OPS')
+
+    team_stats_df['SLG'].plot(kind='bar', ax=axs[1], color='green', alpha=0.7)
+    axs[1].set_title('Team SLG')
+    axs[1].set_ylabel('SLG')
+
+    team_stats_df['OBP'].plot(kind='bar', ax=axs[2], color='purple', alpha=0.7)
+    axs[2].set_title('Team OBP')
+    axs[2].set_ylabel('OBP')
+
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
+
+    # 각 팀별 ERA, WHIP 평균을 히스토그램으로 시각화
+    st.write("### 팀별 ERA, WHIP 평균")
+    fig, axs = plt.subplots(2, 1, figsize=(12, 12))
+
+    team_stats_df['ERA'].plot(kind='bar', ax=axs[0], color='red', alpha=0.7)
+    axs[0].set_title('Team ERA')
+    axs[0].set_ylabel('ERA')
+
+    team_stats_df['WHIP'].plot(kind='bar', ax=axs[1], color='orange', alpha=0.7)
+    axs[1].set_title('Team WHIP')
+    axs[1].set_ylabel('WHIP')
+
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
+
+    # 팀별 지표 박스 플롯
+    st.write("### 팀별 지표 박스 플롯")
+    fig, ax = plt.subplots(figsize=(12, 8))
+    team_stats_df.boxplot(column=['OPS', 'SLG', 'OBP', 'ERA', 'WHIP'], ax=ax)
+    ax.set_title('Team Stats Distribution')
     st.pyplot(fig)

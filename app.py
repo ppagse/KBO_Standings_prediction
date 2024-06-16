@@ -71,7 +71,7 @@ def calculate_win_probability(team1_stats, team2_stats, model, scaler):
     return win_prob
 
 # 팀 간 경기 시뮬레이션
-def simulate_season(team_stats_df, model, scaler, num_games=144, num_simulations=10):
+def simulate_season(team_stats_df, model, scaler, num_games=144, num_simulations=50):
     teams = team_stats_df.index
     total_results = {team: {'wins': 0, 'losses': 0} for team in teams}
 

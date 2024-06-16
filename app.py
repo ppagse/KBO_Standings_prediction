@@ -106,22 +106,36 @@ def simulate_season(team_stats_df, model, scaler, num_games=144, num_simulations
 
 
 # Streamlit 앱 시작
-st.set_page_config(page_title='KBO 시뮬레이션 대시보드')
+st.set_page_config(page_title='KBO리그 시뮬레이션')
 
 # 페이지 설정
-pages = ["앱 설명 및 지표 설명", "선수 성적 일람", "팀 라인업 편집", "예상 순위표"]
+pages = ["홈", "선수 성적 일람", "팀 편집", "예상 순위"]
 page = st.sidebar.selectbox("페이지 선택", pages)
 
-if page == "앱 설명 및 지표 설명":
-    st.title("KBO 시뮬레이션 대시보드")
-    st.write("""
+if page == "홈":
+    st.title("KBO리그 시뮬레이션")
+    st.markdown("""
+    # KBO리그 시뮬레이션
     이 앱은 MLB 데이터와 KBO 데이터를 기반으로 팀 성적을 예측하는 시뮬레이션 앱입니다.
-    사용된 주요 야구 지표는 다음과 같습니다:
-    - OPS (On-base Plus Slugging): 타자의 출루율과 장타율을 합한 값
-    - SLG (Slugging Percentage): 타자의 장타율
-    - OBP (On-base Percentage): 타자의 출루율
-    - ERA (Earned Run Average): 투수의 평균 자책점
-    - WHIP (Walks plus Hits per Inning Pitched): 이닝당 출루 허용률
+
+    ## 사용된 주요 야구 지표
+    - **OPS (On-base Plus Slugging)**: 타자의 출루율과 장타율을 합한 값
+    - **SLG (Slugging Percentage)**: 타자의 장타율
+    - **OBP (On-base Percentage)**: 타자의 출루율
+    - **ERA (Earned Run Average)**: 투수의 평균 자책점
+    - **WHIP (Walks plus Hits per Inning Pitched)**: 이닝당 출루 허용률
+
+    ## 기능 설명
+    1. **선수 성적 일람**: CSV 파일에 있는 선수들의 성적을 일람할 수 있습니다.
+    2. **팀 편집**: 각 팀의 라인업을 편집할 수 있습니다.
+    3. **예상 순위**: 편집한 팀 라인업을 기반으로 KBO리그의 예상 순위를 예측합니다.
+
+    ## 사용 방법
+    1. 사이드바에서 원하는 페이지를 선택하세요.
+    2. 선수 성적 일람 페이지에서 선수들의 성적을 확인하세요.
+    3. 팀 편집 페이지에서 각 팀의 라인업을 편집하세요.
+    4. 예상 순위 페이지에서 시뮬레이션 결과를 확인하세요.
+
     """)
 
 elif page == "선수 성적 일람":
@@ -146,7 +160,7 @@ elif page == "선수 성적 일람":
         st.dataframe(team_data)
 
 # 팀 라인업 편집 페이지
-elif page == "팀 라인업 편집":
+elif page == "팀 편집":
     st.title("팀 라인업 편집")
     
     # 제공된 CSV 파일 경로
@@ -232,7 +246,7 @@ elif page == "팀 라인업 편집":
     # Save updated lineup to a JSON file or display as JSON string
     st.json(dict(team_lineup))
 
-elif page == "예상 순위표":
+elif page == "예상 순위":
     st.title("예상 순위표")
 
     # 로딩 화면 추가

@@ -275,7 +275,7 @@ elif page == "예상 순위":
                     st.session_state.lineup_state[team][pos] = [[player[0], player[1]] for player in players]
     
     # KBO 데이터 로드
-    file_path = '/mnt/data/player_data_2013~2023.csv'
+    file_path = 'data/player_data_2013~2023.csv'
     kbo_player_data = pd.read_csv(file_path)
 
     # 각 팀의 선수 데이터를 이용해 평균 지표 계산

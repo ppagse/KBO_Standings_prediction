@@ -186,6 +186,20 @@ if page == "홈":
         </div>
         """, unsafe_allow_html=True)
 
+    st.markdown('''
+## 사용된 주요 야구 지표
+- **OPS (On-base Plus Slugging)**: 타자의 출루율과 장타율을 합한 값
+    - 수식: OPS = 출루율 (OBP) + 장타율 (SLG)
+- **SLG (Slugging Percentage)**: 타자의 장타율
+    - 수식: SLG = (안타 (1B) + 2루타 (2B) * 2 + 3루타 (3B) * 3 + 홈런 (HR) * 4) / 타수 (AB)
+- **OBP (On-base Percentage)**: 타자의 출루율
+    - 수식: OBP = (안타 (H) + 볼넷 (BB) + 사구 (HBP)) / (타수 (AB) + 볼넷 (BB) + 사구 (HBP) + 희생플라이 (SF))
+- **ERA (Earned Run Average)**: 투수의 평균 자책점
+    - 수식: ERA = (자책점 (ER) * 9) / 이닝 (IP)
+- **WHIP (Walks plus Hits per Inning Pitched)**: 이닝당 출루 허용률
+    - 수식: WHIP = (볼넷 (BB) + 피안타 (H)) / 이닝 (IP)
+''')
+
 elif page == "데이터 수집 과정":
     st.title("데이터 수집 과정")
     
